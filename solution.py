@@ -14,6 +14,39 @@ def assign_value(values, box, value):
         assignments.append(values.copy())
     return values
 
+def foundTwin(values, unit, box):
+    """
+    Returns if finds a twin
+    Args:
+        values(dict): The sudoku in dictionary form
+        unit: The unit that we should look a twin
+        box: The initial box "brother" that could have a twin
+    """
+    result = False
+    value = values[box]
+
+    if len(values[box]) == 2:
+        for other in unit:
+            if values[other] == value and other != box:
+                result = True
+
+    return result
+
+def remove_twins(values, unit, box):
+    """
+    Twin found now it's time to remove it
+    Args:
+        values(dict): The sudoku in dictionary form
+        unit: The unit that twin should be removed
+        box: The initial box "brother" that have a twin
+    """
+    value = values[box]
+
+    for peer in unit:
+        if values[peer] != value:
+            assign_value(values, peer, values[peer].replace(value[0],'').replace(value[1],''))
+
+
 def naked_twins(values):
     """Eliminate values using the naked twins strategy.
     Args:
@@ -28,20 +61,8 @@ def naked_twins(values):
 
     for unit in unitlist:
         for box in unit:
-            if len(values[box]) == 2:
-                foundTwin = False
-                value = values[box]
-
-                for other in unit:
-                    if values[other] == value and other != box:
-                        foundTwin = True
-
-                if foundTwin:
-                    for peer in unit:
-                        if values[peer] != value:
-                            assign_value(values, peer,values[peer].replace(value[0],'').replace(value[1],''))
-    
-        
+            if foundTwin(values, unit,box):
+                remove_twins(values, unit, box)
     
     return values
 
@@ -64,20 +85,6 @@ def grid_values(grid):
         elif c in all_digits:
             values.append(c)
     return dict(zip(boxes, values))
-
-def display(values):
-    """
-    Display the values as a 2-D grid.
-    Args:
-        values(dict): The sudoku in dictionary form
-    """
-    width = 1+max(len(values[s]) for s in boxes)
-    line = '+'.join(['-'*(width*3)]*3)
-    for r in rows:
-        print(''.join(values[r+c].center(width)+('|' if c in '36' else '')
-                      for c in cols))
-        if r in 'CF': print(line)
-    return
 
 def eliminate(values):
     """Eliminate values from peers of each box with a single value.
@@ -115,20 +122,29 @@ def only_choice(values):
         for digit in cols:
             dplaces = [box for box in unit if digit in values[box]]
 
-            if len(dplaces) ==1:
+            if len(dplaces) == 1:
                 assign_value(values, dplaces[0], digit)
 
     return values
 
-def check_values(values):
-    return len([box for box in values.keys()
-         if len(values[box]) == 1])
+def count_solved_boxes(values):
+    """
+    Count the number of solved values (box with value 1)
+    Args: values(dict): The sudoku in dictionary form
+
+    """
+    return len([box for box in values.keys() if len(values[box]) == 1])
 
 def reduce_puzzle(values):
+    """
+    Iterate through the puzzle applying the created strategies
+    in order to solve the sudoku board
+    Args: values(dict): The sudoku in dictionary form
+    """
     stalled = False
 
     while not stalled:
-        solved_values_before = check_values(values)
+        solved_values_before = count_solved_boxes(values)
 
         values = eliminate(values)
 
@@ -136,7 +152,7 @@ def reduce_puzzle(values):
 
         values = naked_twins(values)
 
-        solved_values_after = check_values(values)
+        solved_values_after = count_solved_boxes(values)
 
         stalled = solved_values_before == solved_values_after
 
@@ -193,17 +209,13 @@ if __name__ == '__main__':
     diag_sudoku_grid = '2.............62....1....7...6..8...3...9...7...6..4...4....8....52.............3'
     display(solve(diag_sudoku_grid))
 
-
-    # values = grid_values(diag_sudoku_grid)
     
-    # naked_twins(values)
-    # display(values)
 
-    # try:
-    #     from visualize import visualize_assignments
-    #     visualize_assignments(assignments)
+    try:
+        from visualize import visualize_assignments
+        visualize_assignments(assignments)
 
-    # except SystemExit:
-    #     pass
-    # except:
-    #     print('We could not visualize your board due to a pygame issue. Not a problem! It is not a requirement.')
+    except SystemExit:
+        pass
+    except:
+        print('We could not visualize your board due to a pygame issue. Not a problem! It is not a requirement.')
